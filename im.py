@@ -49,7 +49,8 @@ class Leaf:
 		circleArea = math.pi * math.pow(radius,2)
 		self.boxToCircleArea = boxArea/circleArea
 
-		#what about extent, solidity and equivalent diameter
+
+		#what about extent, solidity and equivalent diameter, harris corner detection -> number of corners,
 
 
 def distanceFromImageCenter(_centroid, _image):
@@ -75,7 +76,7 @@ def toCSV(_list, _filePath):
 	s = "\t";
 	file = open(_filePath, 'w')
 	for i in _list:
-		file.write(i.species+s+i.frayingLevel+s+i.convexHull_to_contourLen+s+i.aToB+s+i.radius+s+i.boxToCircleArea)
+		file.write("%s\t%d\t%d\t%d\t%d\t%d\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea))
 	file.close()
 
 def main(_directory):
@@ -89,20 +90,22 @@ def main(_directory):
 	for myDir in directories:
 		if not myDir.startswith('.'):
 			for d in os.listdir(mainDir+myDir):
-				leaf = findLeaf(mainDir+myDir+"/"+d)
-				leafCopy = leaf
-				leafCopy[leafCopy>0]=255
-				if (not skimage.exposure.is_low_contrast(leafCopy)):
-					temp = temp+1
-					workingDirectory = mainDir+"output/"+myDir
-					if not os.path.exists(workingDirectory):
-						os.makedirs(workingDirectory)
-					if(np.count_nonzero(leaf)/leaf.size < 0.7):	#usuwa nieprawidlowe zdjecia skladajace sie w wiekszosci z 1. To prawdopodbnie nie sa liscie
-						if ((leafCopy.shape[0]>100 and leafCopy.shape[1]>100) or 'abies' in workingDirectory or 'cedrus' in workingDirectory or 'picea' in workingDirectory): #usuwa szumy i  smieci. Nie dotyczy iglastych
-							#io.imsave(workingDirectory+"/leaf"+str(temp)+".png", leafCopy)
-							obj = Leaf(leaf, myDir)
-							obj.extractFeatures()
-							leaves.append(obj)
+				if not d.startswith('.'):
+					leaf = findLeaf(mainDir+myDir+"/"+d)
+					leafCopy = leaf
+					leafCopy[leafCopy>0]=255
+					if (not skimage.exposure.is_low_contrast(leafCopy)):
+						temp = temp+1
+						workingDirectory = mainDir+"output/"+myDir
+						if not os.path.exists(workingDirectory):
+							os.makedirs(workingDirectory)
+						if(np.count_nonzero(leaf)/leaf.size < 0.7):	#usuwa nieprawidlowe zdjecia skladajace sie w wiekszosci z 1. To prawdopodbnie nie sa liscie
+							if ((leafCopy.shape[0]>100 and leafCopy.shape[1]>100) or 'abies' in workingDirectory or 'cedrus' in workingDirectory or 'picea' in workingDirectory): #usuwa szumy i  smieci. Nie dotyczy iglastych
+								#io.imsave(workingDirectory+"/leaf"+str(temp)+".png", leafCopy)
+								obj = Leaf(leaf, myDir)
+								obj.extractFeatures()
+								leaves.append(obj)
+	toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
 
 
 main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-dataset/dataset/images/lab/")
