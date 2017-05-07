@@ -31,23 +31,23 @@ class Leaf:
 		approx2 = cv2.approxPolyDP(cnt,epsilon2,True)
 		app = cv2.arcLength(approx1,True)
 		if (app): #zabezpieczenie przed dzieleniem przez 0
-			self.frayingLevel = cv2.arcLength(approx2,True)/cv2.arcLength(approx1,True)	#im wyzsza wartosc tym bardziej postrzepione krawedzie
+			self.frayingLevel = float(cv2.arcLength(approx2,True))/float(cv2.arcLength(approx1,True))	#im wyzsza wartosc tym bardziej postrzepione krawedzie
 		else:
 			self.frayingLevel = 0
 
 		self.convexHull_to_contourLen = cv2.arcLength(cv2.convexHull(cnt), True)	#oblicza stosunek dlugosci convexHull do dlugosci rzeczywistego konturu
 
 		#minimalny opisujacy obiekt prostokat (rotacja mozliwa) i jego dlugosc i szerokosc. Stosunek dlugosci do szerokosci prostokata daje informacje o ksztalcie liscia
-		self.aToB = ((cv2.minAreaRect(cnt)[1])[0])/((cv2.minAreaRect(cnt)[1])[1])
+		self.aToB = float((cv2.minAreaRect(cnt)[1])[0])/float((cv2.minAreaRect(cnt)[1])[1])
 
 		#promien najmniejszego opisujacego okregu moze swiadczyc o wielkosci liscia
 		(x,y),radius = cv2.minEnclosingCircle(cnt)
-		self.radius = int(radius)
+		self.radius = float(radius)
 
 		#stosunek pola opisanego kola do opisanego prostokata swiadczy o proporcjach liscia
 		boxArea = ((cv2.minAreaRect(cnt)[1])[0])*((cv2.minAreaRect(cnt)[1])[1])
-		circleArea = math.pi * math.pow(radius,2)
-		self.boxToCircleArea = boxArea/circleArea
+		circleArea = math.pi * math.pow(radius,2.0)
+		self.boxToCircleArea = float(boxArea)/float(circleArea)
 
 
 		#what about extent, solidity and equivalent diameter, harris corner detection -> number of corners,
@@ -76,7 +76,7 @@ def toCSV(_list, _filePath):
 	s = "\t";
 	file = open(_filePath, 'w')
 	for i in _list:
-		file.write("%s\t%d\t%d\t%d\t%d\t%d\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea))
+		file.write("%s\t%f\t%f\t%f\t%f\t%f\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea))
 	file.close()
 
 def main(_directory):
