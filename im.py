@@ -10,6 +10,8 @@ from skimage import exposure
 import os
 from matplotlib import pyplot as plt
 import math
+import skimage.morphology as morph
+import sys
 
 class Leaf:
 	"""Class representing leaf and its features"""
@@ -62,12 +64,21 @@ def distanceFromImageCenter(_centroid, _image):
 def findLeaf(_filePath):
 	"""Return leaf extracted from image (file path)"""
 	myImage = io.imread(_filePath)
-	myImageGrey = color.rgb2gray(myImage)
-	mask = (myImageGrey < 0.7)
-	labels = measure.label(mask)
+	imgGray = color.rgb2grey(myImage)
+	mask = imgGray < skimage.filters.threshold_mean(imgGray)
+	imgGray = morph.binary_dilation(mask,np.ones((2,2),np.uint8))
+	imgGray = morph.binary_closing(imgGray,np.ones((5,5),np.uint8))
+	labels = measure.label(imgGray)
 	dist = {}
+	areasDictionary = {}
+	for b in measure.regionprops(labels):
+		areasDictionary[b.filled_area] = b.image
+	biggest = sorted(areasDictionary.keys(), reverse=True)[0]
+	secBiggest = sorted(areasDictionary.keys(), reverse=True)[1]
 	for a in measure.regionprops(labels):
-		dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
+		if (a.bbox[2]<0.9*myImage.shape[0] and a.bbox[3]<0.9*myImage.shape[1]):
+			if(a.filled_area == biggest or a.filled_area == secBiggest):
+				dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
 	leaf = sorted(dist.keys())[0]
 	leafImg = dist[leaf]
 	return skimage.morphology.closing(leafImg, square(3))
@@ -90,24 +101,23 @@ def main(_directory):
 	for myDir in directories:
 		if not myDir.startswith('.'):
 			for d in os.listdir(mainDir+myDir):
-				if not d.startswith('.'):
+				if not d.startswith('.') and "output" not in d:
 					leaf = findLeaf(mainDir+myDir+"/"+d)
 					leafCopy = leaf
 					leafCopy[leafCopy>0]=255
-					if (not skimage.exposure.is_low_contrast(leafCopy)):
-						temp = temp+1
-						workingDirectory = mainDir+"output/"+myDir
-						if not os.path.exists(workingDirectory):
-							os.makedirs(workingDirectory)
-						if(np.count_nonzero(leaf)/leaf.size < 0.7):	#usuwa nieprawidlowe zdjecia skladajace sie w wiekszosci z 1. To prawdopodbnie nie sa liscie
-							if ((leafCopy.shape[0]>100 and leafCopy.shape[1]>100) or 'abies' in workingDirectory or 'cedrus' in workingDirectory or 'picea' in workingDirectory): #usuwa szumy i  smieci. Nie dotyczy iglastych
-								#io.imsave(workingDirectory+"/leaf"+str(temp)+".png", leafCopy)
-								obj = Leaf(leaf, myDir)
-								obj.extractFeatures()
-								leaves.append(obj)
-	toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
+					temp = temp+1
+					workingDirectory = mainDir+"output/"+myDir
+					if not os.path.exists(workingDirectory):
+						os.makedirs(workingDirectory)
+					io.imsave(workingDirectory+"/leaf"+str(temp)+".png", leafCopy)
+					obj = Leaf(leaf, myDir)
+					obj.extractFeatures()
+					leaves.append(obj)
+	#toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
+	toCSV(leaves, sys.argv[2])
 
 
-main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-dataset/dataset/images/lab/")
+main(sys.argv[1])
+#main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-subset1/leafsnap-subset1/")
 
 
