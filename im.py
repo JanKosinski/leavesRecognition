@@ -81,7 +81,7 @@ def findLeaf(_filePath):
 				dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
 	leaf = sorted(dist.keys())[0]
 	leafImg = dist[leaf]
-	return skimage.morphology.closing(leafImg, square(3))
+	return leafImg
 
 def toCSV(_list, _filePath):
 	s = "\t";
@@ -113,11 +113,11 @@ def main(_directory):
 					obj = Leaf(leaf, myDir)
 					obj.extractFeatures()
 					leaves.append(obj)
-	#toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
-	toCSV(leaves, sys.argv[2])
+	toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
+	#toCSV(leaves, sys.argv[2])
 
 
-main(sys.argv[1])
-#main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-subset1/leafsnap-subset1/")
+#main(sys.argv[1])
+main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-subset1/leafsnap-subset1/")
 
 
