@@ -11,7 +11,12 @@ import os
 from matplotlib import pyplot as plt
 import math
 import skimage.morphology as morph
-import sys
+import argparse
+
+parser = argparse.ArgumentParser(description='Leaves recognition')
+parser.add_argument("-i", "--input", metavar="INPUT_DIR", help="Input directory. Each folder in INPUT_DIR should contain leaves photos of one species and should be properly named (latin species names).", default=None, action="store", type=str, required=True, dest="inputDir")
+parser.add_argument("-o", "--output", metavar="OUTPUT_FILE", help="Output file (csv).", default=None, action="store", type=str, required=True, dest="outputFile")
+args = parser.parse_args()
 
 class Leaf:
 	"""Class representing leaf and its features"""
@@ -32,15 +37,12 @@ class Leaf:
 		approx1 = cv2.approxPolyDP(cnt,epsilon1,True)
 		approx2 = cv2.approxPolyDP(cnt,epsilon2,True)
 		app = cv2.arcLength(approx1,True)
-		if (app): #zabezpieczenie przed dzieleniem przez 0
-			self.frayingLevel = float(cv2.arcLength(approx2,True))/float(cv2.arcLength(approx1,True))	#im wyzsza wartosc tym bardziej postrzepione krawedzie
-		else:
-			self.frayingLevel = 0
+		self.frayingLevel = 0 if not app else (float(cv2.arcLength(approx2,True))/float(cv2.arcLength(approx1,True)))	#im wyzsza wartosc tym bardziej postrzepione krawedzie
 
 		self.convexHull_to_contourLen = cv2.arcLength(cv2.convexHull(cnt), True)	#oblicza stosunek dlugosci convexHull do dlugosci rzeczywistego konturu
 
 		#minimalny opisujacy obiekt prostokat (rotacja mozliwa) i jego dlugosc i szerokosc. Stosunek dlugosci do szerokosci prostokata daje informacje o ksztalcie liscia
-		self.aToB = float((cv2.minAreaRect(cnt)[1])[0])/float((cv2.minAreaRect(cnt)[1])[1])
+		self.aToB = 0 if ((cv2.minAreaRect(cnt)[1])[1] == 0) else (float((cv2.minAreaRect(cnt)[1])[0])/float((cv2.minAreaRect(cnt)[1])[1]))
 
 		#promien najmniejszego opisujacego okregu moze swiadczyc o wielkosci liscia
 		(x,y),radius = cv2.minEnclosingCircle(cnt)
@@ -49,10 +51,8 @@ class Leaf:
 		#stosunek pola opisanego kola do opisanego prostokata swiadczy o proporcjach liscia
 		boxArea = ((cv2.minAreaRect(cnt)[1])[0])*((cv2.minAreaRect(cnt)[1])[1])
 		circleArea = math.pi * math.pow(radius,2.0)
-		self.boxToCircleArea = float(boxArea)/float(circleArea)
 
-
-		#what about extent, solidity and equivalent diameter, harris corner detection -> number of corners,
+		self.boxToCircleArea = 0 if (circleArea == 0) else (float(boxArea)/float(circleArea))
 
 
 def distanceFromImageCenter(_centroid, _image):
@@ -84,10 +84,9 @@ def findLeaf(_filePath):
 	return leafImg
 
 def toCSV(_list, _filePath):
-	s = "\t";
 	file = open(_filePath, 'w')
 	for i in _list:
-		file.write("%s\t%f\t%f\t%f\t%f\t%f\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea))
+		file.write("%s\t%f\t%f\t%f\t%f\t%f\t%d\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea, i.numOfLabelsAfterErosion))
 	file.close()
 
 def main(_directory):
@@ -101,23 +100,17 @@ def main(_directory):
 	for myDir in directories:
 		if not myDir.startswith('.'):
 			for d in os.listdir(mainDir+myDir):
-				if not d.startswith('.') and "output" not in d:
+				if not d.startswith('.'):
 					leaf = findLeaf(mainDir+myDir+"/"+d)
 					leafCopy = leaf
 					leafCopy[leafCopy>0]=255
 					temp = temp+1
-					workingDirectory = mainDir+"output/"+myDir
-					if not os.path.exists(workingDirectory):
-						os.makedirs(workingDirectory)
-					io.imsave(workingDirectory+"/leaf"+str(temp)+".png", leafCopy)
 					obj = Leaf(leaf, myDir)
 					obj.extractFeatures()
 					leaves.append(obj)
-	toCSV(leaves, "/Users/jankosinski/Desktop/output.csv")
-	#toCSV(leaves, sys.argv[2])
+	toCSV(leaves, args.outputFile)
 
 
-#main(sys.argv[1])
-main("/Users/jankosinski/Desktop/Przedmioty/Informatyka Medyczna/leafsnap-subset1/leafsnap-subset1/")
+main(args.inputDir)
 
 
