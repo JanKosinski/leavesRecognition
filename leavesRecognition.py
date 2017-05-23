@@ -8,12 +8,16 @@ from sklearn.feature_selection import chi2
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn import svm
+from sklearn.externals import joblib
+import os
+
 
 parser = argparse.ArgumentParser(description='Leaves recognition')
 parser.add_argument("-i", "--input", metavar="INPUT_FILE", help="Input csv file. Labels placed in the first column.", default=None, action="store", type=str, required=True, dest="inputFile")
 parser.add_argument("-s", "--sep", metavar="Column separator", help="CSV column separator. \\t by default. ", default="\t", action="store", type=str, required=False, dest="sep")
 args = parser.parse_args()
 
+scriptDirectory = os.getcwd()
 data = []
 labels = []
 with open(args.inputFile) as f:
@@ -24,7 +28,7 @@ data = np.array(data).astype(np.float64)
 labels = np.array(labels)
 
 # wybór najlepszych cech.
-data_new = SelectKBest(chi2, k=5).fit_transform(data, labels)
+data_new = SelectKBest(chi2, k=12).fit_transform(data, labels)
 
 #Przykladowy podzial na zbiory testowy i uczacy. Do tej pory nieuzywane poniewaz k-krotna walidacja krzyzowa zostala wykorzystana
 #data_train, data_test, labels_train, labels_test = train_test_split(data, labels, test_size=0.25, random_state=1234)
@@ -84,13 +88,14 @@ plt.show()"""
 #http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
 
 #znajdowanie najlepszego klasyfikatora
-"""parameters = {'n_estimators': list(range(1, 201, 10)), 'max_depth': list(range(5,21,1)) }
+parameters = {'n_estimators': list(range(1, 201, 10)), 'max_depth': list(range(5,21,1)) }
 clf = GridSearchCV(rfc, parameters, cv=10)
 clf.fit(data_new, labels)
 print(clf.best_estimator_)
 print(clf.best_params_)
-print(clf.best_score_)"""
+print(clf.best_score_)
 
 
+joblib.dump(clf, "%s/classifier.pkl" % (scriptDirectory))
 
         
