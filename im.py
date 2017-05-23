@@ -21,12 +21,13 @@ args = parser.parse_args()
 class Leaf:
 	"""Class representing leaf and its features"""
 	def __init__(self, _img, _species):
+		global testID
 		self.img = _img.astype(np.uint8)
 		self.contour = _img.astype(np.uint8)
 		self.img[self.img>0]=1
 		self.species = _species
 
-	def extractFeatures(self):
+	def extractFeatures(self, _regionprops):
 		image, contours, hierarchy = cv2.findContours(self.contour, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		cnt = contours[0]
 		cv2.drawContours(image, [cnt], 0, (255,255,255), 1)
@@ -54,6 +55,42 @@ class Leaf:
 
 		self.boxToCircleArea = 0 if (circleArea == 0) else (float(boxArea)/float(circleArea))
 
+		# erozja i zliczanie duzych obiektow po erozji
+		erosed = morph.binary_erosion(self.img,np.ones((9,9),np.uint8))
+		labels = measure.label(erosed)
+		objects = 0
+		for a in measure.regionprops(labels):
+			if a.area>0.05*self.img.shape[0]*self.img.shape[1]:
+				objects = objects + 1
+		self.numOfLabelsAfterErosion = 1 if (objects==0) else objects
+
+		#Eccentricity of the ellipse that has the same second-moments as the region. The eccentricity is the ratio of the focal distance (distance between focal points) over the major axis length. The value is in the interval [0, 1). When it is 0, the ellipse becomes a circle.
+		self.eccentricity = _regionprops.eccentricity
+
+		#major_axis_length. The length of the major axis of the ellipse that has the same normalized second central moments as the region.
+		self.major_axis_length = _regionprops.major_axis_length
+
+		#minor_axis_length. The length of the minor axis of the ellipse that has the same normalized second central moments as the region.
+		self.minor_axis_length = _regionprops.minor_axis_length
+
+		#extent. Ratio of pixels in the region to pixels in the total bounding box. Computed as area / (rows * cols)
+		self.extent = _regionprops.extent
+
+		#solidity. Ratio of pixels in the region to pixels of the convex hull image.
+		self.solidity = _regionprops.solidity
+
+		#filled-area. Number of pixels of filled region.
+		self.filled_area = _regionprops.filled_area
+
+		#euler number. Euler characteristic of region. Computed as number of objects (= 1) subtracted by number of holes (8-connectivity).
+		self.euler_number = _regionprops.euler_number
+
+
+
+
+
+
+
 
 def distanceFromImageCenter(_centroid, _image):
 	"""Return the distance of object centroid [tuple (row, col)] from the image center"""
@@ -78,15 +115,16 @@ def findLeaf(_filePath):
 	for a in measure.regionprops(labels):
 		if (a.bbox[2]<0.9*myImage.shape[0] and a.bbox[3]<0.9*myImage.shape[1]):
 			if(a.filled_area == biggest or a.filled_area == secBiggest):
-				dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
+				#dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
+				dist[distanceFromImageCenter(a.centroid, myImage)] = a
 	leaf = sorted(dist.keys())[0]
-	leafImg = dist[leaf]
-	return leafImg
+	leafImg = dist[leaf].image.astype(np.uint8)
+	return (leafImg, dist[leaf])
 
 def toCSV(_list, _filePath):
 	file = open(_filePath, 'w')
 	for i in _list:
-		file.write("%s\t%f\t%f\t%f\t%f\t%f\t%d\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea, i.numOfLabelsAfterErosion))
+		file.write("%s\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\t%d\n"%(i.species, i.frayingLevel, i.convexHull_to_contourLen, i.aToB, i.radius, i.boxToCircleArea, i.numOfLabelsAfterErosion, i.eccentricity, i.minor_axis_length, i.major_axis_length, i.extent, i.solidity, i.filled_area))
 	file.close()
 
 def main(_directory):
@@ -94,19 +132,19 @@ def main(_directory):
 	leaves = []
 	if (_directory[-1]!='/'):
 		_directory = _directory+'/'
-	temp = 0
+	#temp = 0
 	mainDir = _directory
 	directories = os.listdir(mainDir)
 	for myDir in directories:
 		if not myDir.startswith('.'):
 			for d in os.listdir(mainDir+myDir):
 				if not d.startswith('.'):
-					leaf = findLeaf(mainDir+myDir+"/"+d)
-					leafCopy = leaf
-					leafCopy[leafCopy>0]=255
-					temp = temp+1
+					leaf, regionprops = findLeaf(mainDir+myDir+"/"+d)
+					#leafCopy = leaf
+					#leafCopy[leafCopy>0]=255
+					#temp = temp+1
 					obj = Leaf(leaf, myDir)
-					obj.extractFeatures()
+					obj.extractFeatures(regionprops)
 					leaves.append(obj)
 	toCSV(leaves, args.outputFile)
 
