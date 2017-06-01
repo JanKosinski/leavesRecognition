@@ -110,7 +110,6 @@ def findLeaf(_filePath):
 	for a in measure.regionprops(labels):
 		if (a.bbox[2]<0.9*myImage.shape[0] and a.bbox[3]<0.9*myImage.shape[1]):
 			if(a.filled_area == biggest or a.filled_area == secBiggest):
-				#dist[distanceFromImageCenter(a.centroid, myImage)] = a.image.astype(np.uint8)
 				dist[distanceFromImageCenter(a.centroid, myImage)] = a
 	leaf = sorted(dist.keys())[0]
 	leafImg = dist[leaf].image.astype(np.uint8)
@@ -142,7 +141,7 @@ def main(_directory):
 		for f in files:
 			if not f.startswith('.'):
 				leaf, regionprops = findLeaf(_directory+f)
-				obj = Leaf(leaf, "???")
+				obj = Leaf(leaf, f)
 				obj.extractFeatures(regionprops)
 				leaves.append(obj)
 	toCSV(leaves, args.outputFile)
